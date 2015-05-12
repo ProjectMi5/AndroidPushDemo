@@ -5,7 +5,7 @@ package mi5.pushtest;
  */
 public class ApplicationConstants {
 
-    static final String APP_SERVER_URL = "https://wngr.de/gcm/gcm.php?shareRegId=true";
+    static final String APP_SERVER_URL = "http://iotnoderedtest.mybluemix.net/register/";
     static final String GOOGLE_PROJ_ID = "519296367272";
-    static final String MSG_KEY = "m";
+    static final String MSG_KEY = "mi5";
 }
