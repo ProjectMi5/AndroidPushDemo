@@ -40,6 +40,7 @@ public class MainActivity extends Activity {
 
     public static final String REG_ID = "regId";
     public static final String EMAIL_ID = "eMailId";
+    public static final String UPSTREAM_MESSAGE_ID = "upstreamMessageId";
     EditText emailET;
 
     @Override
@@ -129,69 +130,36 @@ public class MainActivity extends Activity {
         editor.putString(REG_ID, regId);
         editor.putString(EMAIL_ID, emailID);
         editor.commit();
-        storeRegIdinServer();
+        storeRegIdInServer();
 
     }
 
-    private void storeRegIdinServer() {
-        prgDialog.show();
-        params.put("regId", regId);
-        // Make RESTful webservice call using AsyncHttpClient object
-        AsyncHttpClient client = new AsyncHttpClient(true, 80, 443);
-        client.post(ApplicationConstants.APP_SERVER_URL, params,
-                new AsyncHttpResponseHandler() {
-                    // When the response returned by REST has Http
-                    // response code '200'
-                    @Override
-                    public void onSuccess(String response) {
-                        // Hide Progress Dialog
-                        prgDialog.hide();
-                        if (prgDialog != null) {
-                            prgDialog.dismiss();
-                        }
-                        Toast.makeText(applicationContext,
-                                "Reg Id shared successfully with Web App ",
-                                Toast.LENGTH_LONG).show();
-                        Intent i = new Intent(applicationContext,
-                                HomeActivity.class);
-                        i.putExtra("regId", regId);
-                        startActivity(i);
-                        finish();
-                    }
+    private int getNewUpstreamMessageId() {
+        SharedPreferences prefs = getSharedPreferences("UserDetails", Context.MODE_PRIVATE);
+        int id = prefs.getInt(UPSTREAM_MESSAGE_ID, 0);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putInt(UPSTREAM_MESSAGE_ID, ++id);
+        editor.commit();
+        return id;
+    }
 
-                    // When the response returned by REST has Http
-                    // response code other than '200' such as '404',
-                    // '500' or '403' etc
-                    @Override
-                    public void onFailure(int statusCode, Throwable error,
-                                          String content) {
-                        // Hide Progress Dialog
-                        prgDialog.hide();
-                        if (prgDialog != null) {
-                            prgDialog.dismiss();
-                        }
-                        // When Http response code is '404'
-                        if (statusCode == 404) {
-                            Toast.makeText(applicationContext,
-                                    "Requested resource not found",
-                                    Toast.LENGTH_LONG).show();
-                        }
-                        // When Http response code is '500'
-                        else if (statusCode == 500) {
-                            Toast.makeText(applicationContext,
-                                    "Something went wrong at server end",
-                                    Toast.LENGTH_LONG).show();
-                        }
-                        // When Http response code other than 404, 500
-                        else {
-                            Toast.makeText(
-                                    applicationContext,
-                                    "Unexpected Error occcured! [Most common Error: Device might "
-                                            + "not be connected to Internet or remote server is not up and running], check for other errors as well",
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    }
-                });
+    private void storeRegIdInServer() {
+        try {
+            Bundle data = new Bundle();
+            data.putString(ApplicationConstants.UPSTREAM_REGID_KEY, regId);
+            gcmObj.send(ApplicationConstants.GOOGLE_PROJ_ID + "@gcm.googleapis.com", String.valueOf(getNewUpstreamMessageId()), data);
+            Toast.makeText(this, "Sent regId to backend via upstream message.", Toast.LENGTH_SHORT).show();
+            Intent i = new Intent(applicationContext,
+                    HomeActivity.class);
+            i.putExtra("regId", regId);
+            startActivity(i);
+            finish();
+        }
+        catch (IOException ex) {
+            Toast.makeText(this, "Sending regId to backend via upstream failed!", Toast.LENGTH_LONG).show();
+            regId = "";
+            storeRegIdinSharedPref(this, "", "");
+        }
     }
 
     private boolean checkPlayServices() {
